@@ -10,6 +10,18 @@ import mysql.connector
 
 
 def filter_datum(fields, redaction, message, separator):
+    """
+    Redacts specified fields from a message.
+
+    Args:
+        fields (tuple): Fields to redact.
+        redaction (str): String to use for redaction.
+        message (str): Message to filter.
+        separator (str): Separator used to separate fields in the message.
+
+    Returns:
+        str: Filtered message.
+    """
     pattern = '|'.join(f'{field}=[^\\{separator}]*' for field in fields)
     return re.sub(
         pattern, lambda m: f"{m.group().split('=')[0]}={redaction}", message
@@ -29,6 +41,15 @@ class RedactingFormatter(logging.Formatter):
         self.fields = fields
 
     def format(self, record: logging.LogRecord) -> str:
+        """
+        Formats the log record with redaction of sensitive data.
+
+        Args:
+            record (logging.LogRecord): The log record to format.
+
+        Returns:
+            str: Formatted log message.
+        """
         original_message = super().format(record)
         return filter_datum(
             self.fields, self.REDACTION, original_message, self.SEPARATOR
@@ -39,6 +60,12 @@ PII_FIELDS = ("name", "email", "ssn", "password", "phone_number")
 
 
 def get_logger() -> logging.Logger:
+    """
+    Retrieves a logger configured for redacting PII.
+
+    Returns:
+        logging.Logger: Configured logger.
+    """
     logger = logging.getLogger("user_data")
     logger.setLevel(logging.INFO)
     logger.propagate = False
@@ -52,6 +79,12 @@ def get_logger() -> logging.Logger:
 
 
 def get_db():
+    """
+    Retrieves a connection to the database.
+
+    Returns:
+        mysql.connector.connection.MySQLConnection: Database connection.
+    """
     username = os.getenv('PERSONAL_DATA_DB_USERNAME', 'root')
     password = os.getenv('PERSONAL_DATA_DB_PASSWORD', 'M!sasa12')
     host = os.getenv('PERSONAL_DATA_DB_HOST', 'localhost')
@@ -73,6 +106,9 @@ def get_db():
 
 # Define the main function
 def main():
+    """
+    Main function to retrieve data from database and log it with redacted PII.
+    """
     db = get_db()
     cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT * FROM users;")
