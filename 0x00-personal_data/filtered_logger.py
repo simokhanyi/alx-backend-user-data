@@ -7,6 +7,7 @@ import logging
 import re
 import os
 import mysql.connector
+from mysql.connector import errorcode
 
 
 def filter_datum(fields, redaction, message, separator):
@@ -85,23 +86,22 @@ def get_db():
     Returns:
         mysql.connector.connection.MySQLConnection: Database connection.
     """
-    username = os.getenv('PERSONAL_DATA_DB_USERNAME', 'root')
-    password = os.getenv('PERSONAL_DATA_DB_PASSWORD', 'M!sasa12')
-    host = os.getenv('PERSONAL_DATA_DB_HOST', 'localhost')
-    database = os.getenv('PERSONAL_DATA_DB_NAME', 'my_db')
-
-    print(f"Connecting to database: "
-          f"USERNAME: {username}, "
-          f"PASSWORD: {password}, "
-          f"HOST: {host}, "
-          f"DATABASE: {database}")
-
-    return mysql.connector.connect(
-        user=username,
-        password=password,
-        host=host,
-        database=database
-    )
+    try:
+        db = mysql.connector.connect(
+            user='root',
+            password='M!sasa12',
+            host='localhost',
+            database='my_db'
+        )
+        return db
+    except mysql.connector.Error as err:
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            print("Access denied: Please check your username or password")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            print("Database does not exist")
+        else:
+            print(err)
+        return None
 
 
 # Define the main function
