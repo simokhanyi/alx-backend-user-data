@@ -110,17 +110,27 @@ def main():
     Main function to retrieve data from database and log it with redacted PII.
     """
     db = get_db()
-    cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM users;")
-    rows = cursor.fetchall()
+    if db is None:
+        print("Failed to connect to the database. Exiting.")
+        return
 
-    logger = get_logger()
-    for row in rows:
-        message = "; ".join(f"{key}={value}" for key, value in row.items())
-        logger.info(message)
+    cursor = None
+    try:
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM users;")
+        rows = cursor.fetchall()
 
-    cursor.close()
-    db.close()
+        logger = get_logger()
+        for row in rows:
+            message = "; ".join(f"{key}={value}" for key, value in row.items())
+            redacted_message = filter_datum(PII_FIELDS, "***", message, "; ")
+            logger.info(redacted_message)
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+    finally:
+        if cursor:
+            cursor.close()
+        db.close()
 
 
 if __name__ == "__main__":
