@@ -4,6 +4,7 @@ Auth module
 """
 from flask import request
 from typing import List, TypeVar
+import re
 
 
 class Auth:
@@ -19,10 +20,13 @@ class Auth:
             path += '/'
 
         for excluded_path in excluded_paths:
-            # Ensure excluded_path ends with a slash for comparison
-            if not excluded_path.endswith('/'):
-                excluded_path += '/'
-            if path == excluded_path:
+            # Convert the excluded path to a regular expression
+            if excluded_path.endswith('*'):
+                pattern = re.escape(excluded_path[:-1]) + '.*'
+            else:
+                pattern = re.escape(excluded_path) + '/?'
+
+            if re.match(pattern, path):
                 return False
 
         return True
