@@ -77,8 +77,9 @@ class Auth:
         try:
             user = DB().find_user_by(email=email)
             if user:
-                pwd_valid = bcrypt.checkpw(password.encode("utf-8"),
-                                           user.hashed_password.encode("utf-8"))
+                hashed_pw = user.hashed_password.encode("utf-8")
+                password_encoded = password.encode("utf-8")
+                pwd_valid = bcrypt.checkpw(password_encoded, hashed_pw)
                 if pwd_valid:
                     return True
             return False
