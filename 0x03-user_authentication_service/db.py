@@ -77,3 +77,23 @@ class DB:
             raise NoResultFound("No user found with the given attributes")
 
         return user
+
+    def update_user(self, user_id: int, **kwargs) -> None:
+        """Update a user's attributes.
+
+        Args:
+            user_id (int): The ID of the user to update.
+            **kwargs: Arbitrary keyword arguments representing attributes.
+
+        Raises:
+            ValueError: If an attribute is not valid for the User model.
+        """
+        user = self.find_user_by(id=user_id)
+        session = self._session
+
+        for key, value in kwargs.items():
+            if not hasattr(User, key):
+                raise ValueError(f"Invalid attribute '{key}' for User")
+            setattr(user, key, value)
+
+        session.commit()
