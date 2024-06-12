@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """DB module
 """
+import logging
+from typing import Dict
+
 from sqlalchemy import create_engine
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.session import Session
-from sqlalchemy.exc import InvalidRequestError, NoResultFound
 
 from user import Base, User
+
+logging.disable(logging.WARNING)
 
 
 class DB:
@@ -32,68 +38,70 @@ class DB:
         return self.__session
 
     def add_user(self, email: str, hashed_password: str) -> User:
-        """Add a new user to the database.
+        """Adds a new user to the db with the given email and hashed password.
 
         Args:
-            email (str): The email of the user.
-            hashed_password (str): The hashed password of the user.
+            email (str): The email address of the new user.
+            hashed_password (str): The hashed password of the new user.
 
         Returns:
-            User: The user object added to the database.
+            User: A User object representing the new user.
         """
         new_user = User(email=email, hashed_password=hashed_password)
-        session = self._session
-        session.add(new_user)
-        session.commit()
+        try:
+            self._session.add(new_user)
+            self._session.commit()
+        except Exception as e:
+            print(f"Error adding user to database: {e}")
+            self._session.rollback()
+            raise
         return new_user
 
-    def find_user_by(self, **kwargs) -> User:
-        """Find a user by arbitrary keyword arguments.
-
-        Args:
-            **kwargs: Arbitrary keyword arguments to filter the user.
-
-        Returns:
-            User: The user object found.
+    def find_user_by(self, **kwargs: Dict[str, str]) -> User:
+        """Find a user by specified attributes.
 
         Raises:
-            NoResultFound: If no user is found.
-            InvalidRequestError: If invalid query arguments are passed.
+            NoResultFound: When no results are found.
+            InvalidRequestError: When invalid query arguments are passed.
+
+        Returns:
+            User: First row found in the `users` table.
         """
         session = self._session
-        query = session.query(User)
-
-        for key, value in kwargs.items():
-            if not hasattr(User, key):
-                raise InvalidRequestError(
-                    f"Invalid attribute '{key}' for User"
-                )
-
-            query = query.filter(getattr(User, key) == value)
-
-        user = query.first()
-
-        if user is None:
-            raise NoResultFound("No user found with the given attributes")
-
+        try:
+            user = session.query(User).filter_by(**kwargs).one()
+        except NoResultFound:
+            raise NoResultFound()
+        except InvalidRequestError:
+            raise InvalidRequestError()
         return user
 
     def update_user(self, user_id: int, **kwargs) -> None:
-        """Update a user's attributes.
+        """Updates a user's attributes by user ID and arbitrary keyword
+        arguments.
 
         Args:
             user_id (int): The ID of the user to update.
-            **kwargs: Arbitrary keyword arguments representing attributes.
+            **kwargs: Keyword arguments representing the user's attributes to
+            update.
 
         Raises:
-            ValueError: If an attribute is not valid for the User model.
+            ValueError: If an invalid attribute is passed in kwargs.
+
+        Returns:
+            None
         """
-        user = self.find_user_by(id=user_id)
-        session = self._session
+        try:
+            user = self.find_user_by(id=user_id)
+        except NoResultFound:
+            raise ValueError(f"User with id {user_id} not found")
 
         for key, value in kwargs.items():
-            if not hasattr(User, key):
-                raise ValueError(f"Invalid attribute '{key}' for User")
+            if not hasattr(user, key):
+                raise ValueError(f"User has no attribute {key}")
             setattr(user, key, value)
 
-        session.commit()
+        try:
+            self._session.commit()
+        except InvalidRequestError:
+            raise ValueError("Invalid request")

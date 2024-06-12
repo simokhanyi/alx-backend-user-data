@@ -10,17 +10,19 @@ Base = declarative_base()
 
 
 class User(Base):
-    """
-    User model representing the users table in the database.
+    """A class representing a user in the system.
 
     Attributes:
-        id (int): The primary key of the user.
-        email (str): The email of the user, non-nullable.
-        hashed_password (str): The hashed password of the user, non-nullable.
-        session_id (str): The session ID of the user, nullable.
-        reset_token (str): The reset token for password recovery, nullable.
+        __tablename__ (str): The name of the table in the database where
+            user records are stored.
+        id (int): The unique identifier of the user.
+        email (str): The email address of the user.
+        hashed_password (str): The hashed password of the user.
+        session_id (str): The session ID of the user, used to maintain
+            user sessions.
+        reset_token (str): The reset token of the user, used for password
+            resets.
     """
-
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True)
